@@ -1,0 +1,61 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: creditscore
+  labels:
+    commit: ${WERCKER_GIT_COMMIT}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: creditscore
+  template:
+    metadata:
+      labels:
+        app: creditscore
+        commit: ${WERCKER_GIT_COMMIT}
+    spec:
+      containers:
+      - name: creditscore
+        image: ${DOCKER_REPO}:${WERCKER_APPLICATION_NAME}-${WERCKER_GIT_COMMIT}
+        imagePullPolicy: Always
+        ports:
+        - name: creditscore
+          containerPort: 3000
+          protocol: TCP
+      imagePullSecrets:
+        - name: amorena-imagesecret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: creditscore
+  labels:
+     app: creditscore
+     commit: ${WERCKER_GIT_COMMIT}
+spec:
+  ports:
+    - port: 8088
+      targetPort: 3000
+  selector:
+    app: creditscore
+    commit: ${WERCKER_GIT_COMMIT}
+  type: LoadBalancer
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: creditscore-ingress
+  annotations:
+    kubernetes.io/ingress.class: 'nginx'
+    ingress.kubernetes.io/add-base-url: 'true'
+    ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - http:
+        paths:
+        - path: /creditscore/
+          backend:
+           serviceName: creditscore
+           servicePort: 8088
+---
